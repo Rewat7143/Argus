@@ -1,10 +1,43 @@
 import json
 import streamlit as st
-import os
+import pickle
+import numpy as np
+import cv2
 from streamlit_option_menu import option_menu
 from streamlit_lottie import st_lottie
+from PIL import Image
+model=pickle.load(open('model.pkl','rb'))
 
 st.set_page_config(layout='wide')
+
+def classify_image(uploaded_files):
+    # Convert BytesIO to Image
+    img = Image.open(uploaded_files)
+
+    # Convert Image to numpy array
+    img = np.array(img)
+
+    # Ensure img is a numpy array
+    img = np.array(img) if not isinstance(img, np.ndarray) else img
+
+    # Load your deepfake model
+    meso = pickle.load(open('model.pkl','rb'))  # Initialize your model here
+
+    # Preprocess the image
+    img_array = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    img_array = cv2.resize(img_array, (256, 256))
+    img_array = img_array / 255.0  # Rescale to match the training data preprocessing
+
+    # Flatten the image data to match the input shape that the model expects
+    img_array = img_array.flatten()[:100]  # Take the first 100 elements
+    img_array = np.expand_dims(img_array, axis=0)  # Expand dimensions to match input shape
+
+    # Perform prediction
+    prediction = meso.predict(img_array)
+    pred='{0:.{1}f}'.format(prediction[0][0], 2)
+    return float(pred)
+
+
 
 def cont(im1,t1,t11,im2,t2,t22,im3,t3,t33,im4,t4,t44):
     """Displays an image and text side-by-side in a Streamlit app.
@@ -148,33 +181,9 @@ if selected == 'About':
 elif selected == "Projects":
     st.markdown("#### Welcome :clap:")
     # Deepfake model selection with informative descriptions
-    selected_options = st.multiselect(
-        'Select A Deep Fake Model:',
-        [1, 2, 3],
-        key='model_selection',
-        help="Select one or more deepfake detection models to use for analysis.")
 
     # File upload with clear guidance and validation
-    uploaded_files = st.file_uploader(
-        "Choose files to upload:",
-        type=['jpg', 'png', 'mp4'],
-        accept_multiple_files=True,
-        help="Upload images or videos to analyze for potential deepfakes. Supported file types: JPG, PNG, MP4.")
-
-    if uploaded_files:
-        # Process uploaded files
-        for file in uploaded_files:
-            file_type = get_file_type(file)
-
-            if file_type == 'image':
-                st.image(file, caption=f"Uploaded Image - {file.name}", use_column_width=True)
-
-            elif file_type == 'video':
-                st.video(file, caption=f"Uploaded Video - {file.name}")
-
-            # Add placeholder for deepfake detection results based on selected models
-            st.empty()  # Create an empty container for future content
-            st.markdown("_(Deepfake Detection Results will be displayed here)_")  # Add a placeholder text
+    uploaded_files = st.file_uploader("Choose an image...", type=["jpg", "png"])
 
     # Button with clear action and feedback
     if st.button("Hit Me!", key='analyze_button', help="Trigger deepfake analysis based on uploaded files and selected models."):
@@ -182,43 +191,33 @@ elif selected == "Projects":
             st.error("Please upload files to analyze.")
         else:
             # Perform deepfake analysis using selected models and display results
-            st.success("Deepfake analysis in progress...")
+            output=classify_image(uploaded_files)
+            if output >= 0.5:
+                st.success("The image is real.")
+            else:
+                st.warning("This could be a deepfake!")
             # Replace ... with actual analysis logic and result presentation
 
     # Review text area with optional input and validation
-    review_text = st.text_area("Review please :", key='review_text', help="Optionally provide a review of the analysis results.")
-
-    # Submit button with clear action and feedback
-    if st.button("Submit", key='submit_button', help="Submit your analysis and review."):
-        if not uploaded_files:
-            st.error("Please upload files to analyze.")
-        elif not review_text:
-            st.error("Please provide a review.")
-        elif not selected_options:
-            st.error("Model is Not selected ")
-        else:
-            # Submit analysis and review (e.g., send to server, save to database)
-            st.success("Submitted successfully!")
-            st.balloons()
 
     
 elif selected == 'Credit':
     st.markdown("# Team Members")
     im1="Argus/Vin.jpg"
     t1="#### **Vinod Polinati**"
-    t11="### Machine Learning "
+    t11="##### Machine Learning "
 
     im2="Argus/Raw.jpg"
     t2="#### **Reddy Rewat**"
-    t22="### Machine Learning"
+    t22="##### Machine Learning"
     
     im3="Argus/Sha.jpg"
     t3="#### **Shaik Shajid**"
-    t33="### UI&UX Designer"
+    t33="##### UI&UX Designer"
     
     im4="Argus/rah.jpg"
     t4="#### **Miazur Rahaman**"
-    t44="### Streamlit Developer"
+    t44="##### Streamlit Developer"
     
     cont(im1,t1,t11,im2,t2,t22,im3,t3,t33,im4,t4,t44)
 
