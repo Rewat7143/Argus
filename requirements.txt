@@ -1,0 +1,10 @@
+opencv2
+tensorflow
+numpy
+streamlit
+streamlit_option_menu
+streamlit_lottie
+pickle
+json
+matplotlib
+scipy
